@@ -549,16 +549,16 @@
   color: #fff;
 }
 
-.detail-button:focus,
-.detail-button:focus-visible,
-.detail-button:hover {
-  color: #0d0d0d;
-}
-
-.favorite-button:focus,
-.favorite-button:focus-visible,
-.favorite-button:hover {
-  color: #101010;
+.detail-button.control-selected,
+.detail-button.control-selected:focus,
+.detail-button.control-selected:focus-visible,
+.detail-button.control-selected:hover,
+.favorite-button.control-selected,
+.favorite-button.control-selected:focus,
+.favorite-button.control-selected:focus-visible,
+.favorite-button.control-selected:hover {
+  background: #828a94;
+  color: #fff;
 }
 
 .favorite-button.favorited:focus,
