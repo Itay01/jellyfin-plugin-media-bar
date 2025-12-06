@@ -159,22 +159,22 @@
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 42px;
+  font-size: 64px;
   cursor: pointer;
   color: #fff;
   z-index: 5;
   display: flex;
   justify-content: center;
   align-items: center;
-  min-width: 64px;
-  min-height: 64px;
+  min-width: 88px;
+  min-height: 88px;
   -webkit-tap-highlight-color: #fff0;
   transition: opacity 0.18s ease, transform 0.18s ease;
   will-change: opacity, transform;
 }
 
 .arrow i {
-  font-size: 44px;
+  font-size: 72px;
 }
 
 .left-arrow {
@@ -545,7 +545,7 @@
   transform: translateY(-1px) scale(1.05);
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.32),
     0 14px 30px rgba(0, 0, 0, 0.48);
-  background: linear-gradient(135deg, #949ca7, #828a94);
+  background: #828a94;
   color: #fff;
 }
 
