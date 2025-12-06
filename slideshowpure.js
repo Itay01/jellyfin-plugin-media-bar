@@ -668,6 +668,10 @@ const ApiUtils = {
         throw new Error(`Failed to toggle favorite: ${response.statusText}`);
       }
       button.classList.toggle("favorited", !isFavorite);
+      button.setAttribute(
+        "aria-label",
+        !isFavorite ? "Remove from favorites" : "Add to favorites"
+      );
     } catch (error) {
       console.error("Error toggling favorite:", error);
     }
@@ -977,6 +981,7 @@ const SlideCreator = {
       <span class="play-text">Play</span>
     `,
       tabIndex: "0",
+      "aria-label": "Play",
       onclick: (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -994,6 +999,7 @@ const SlideCreator = {
     return SlideUtils.createElement("button", {
       className: "detailButton detail-button",
       tabIndex: "0",
+      "aria-label": "More info",
       onclick: (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -1020,6 +1026,7 @@ const SlideCreator = {
     const button = SlideUtils.createElement("button", {
       className: `favorite-button ${isFavorite ? "favorited" : ""}`,
       tabIndex: "0",
+      "aria-label": isFavorite ? "Remove from favorites" : "Add to favorites",
       onclick: async (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -1142,7 +1149,7 @@ const SlideshowManager = {
    * @param {number} index - Slide index to display
    */
 
-  async updateCurrentSlide(index) {
+  async updateCurrentSlide(index, focusControlClass) {
     if (STATE.slideshow.isTransitioning) {
       return;
     }
@@ -1206,6 +1213,14 @@ const SlideshowManager = {
       this.preloadAdjacentSlides(index);
       this.updateDots();
 
+      if (
+        focusControlClass ||
+        (STATE.slideshow.containerFocused &&
+          !currentSlide.contains(document.activeElement))
+      ) {
+        this.focusControlOnSlide(currentSlide, focusControlClass);
+      }
+
       if (STATE.slideshow.slideInterval && !STATE.slideshow.isPaused) {
         STATE.slideshow.slideInterval.restart();
       }
@@ -1224,6 +1239,29 @@ const SlideshowManager = {
           if (prevLogo) prevLogo.classList.remove("animate");
         }
       }, CONFIG.fadeTransitionDuration);
+    }
+  },
+
+  focusControlOnSlide(slide, controlClass = "play-button") {
+    if (!slide) return;
+
+    const preferred = controlClass
+      ? slide.querySelector(`.${controlClass}`)
+      : null;
+    const fallbackOrder = [
+      preferred,
+      slide.querySelector(".play-button"),
+      slide.querySelector(".detail-button"),
+      slide.querySelector(".favorite-button"),
+    ].filter(Boolean);
+
+    const target = fallbackOrder[0];
+
+    if (target) {
+      requestAnimationFrame(() => {
+        target.focus({ preventScroll: true });
+      });
+      STATE.slideshow.containerFocused = true;
     }
   },
 
@@ -1271,22 +1309,22 @@ const SlideshowManager = {
     }
   },
 
-  nextSlide() {
+  nextSlide(focusControlClass) {
     const currentIndex = STATE.slideshow.currentSlideIndex;
     const totalItems = STATE.slideshow.totalItems;
 
     const nextIndex = (currentIndex + 1) % totalItems;
 
-    this.updateCurrentSlide(nextIndex);
+    this.updateCurrentSlide(nextIndex, focusControlClass);
   },
 
-  prevSlide() {
+  prevSlide(focusControlClass) {
     const currentIndex = STATE.slideshow.currentSlideIndex;
     const totalItems = STATE.slideshow.totalItems;
 
     const prevIndex = (currentIndex - 1 + totalItems) % totalItems;
 
-    this.updateCurrentSlide(prevIndex);
+    this.updateCurrentSlide(prevIndex, focusControlClass);
   },
 
   /**
@@ -1382,50 +1420,117 @@ const SlideshowManager = {
    * Initializes keyboard event listeners
    */
   initKeyboardEvents() {
+    const container = SlideUtils.getOrCreateSlidesContainer();
+    container.setAttribute("tabindex", "-1");
+
+    const getFocusableControls = () => {
+      const activeSlide = container.querySelector(".slide.active");
+      if (!activeSlide) return [];
+      return Array.from(
+        activeSlide.querySelectorAll(
+          ".button-container .detail-button, .button-container .play-button, .button-container .favorite-button"
+        )
+      );
+    };
+
+    const getActiveControl = () => {
+      const activeElement = document.activeElement;
+      if (activeElement && activeElement.closest(".button-container")) {
+        return activeElement;
+      }
+
+      const controls = getFocusableControls();
+      return controls.find((control) => control.classList.contains("play-button")) || controls[0];
+    };
+
+    const moveFocusBetweenControls = (direction) => {
+      const controls = getFocusableControls();
+      if (controls.length === 0) return false;
+
+      let activeIndex = controls.indexOf(document.activeElement);
+
+      if (activeIndex === -1) {
+        const defaultIndex = Math.max(
+          controls.findIndex((control) => control.classList.contains("play-button")),
+          0
+        );
+        controls[defaultIndex].focus({ preventScroll: true });
+        return true;
+      }
+
+      if (direction === "next" && activeIndex < controls.length - 1) {
+        controls[activeIndex + 1].focus({ preventScroll: true });
+        return true;
+      }
+
+      if (direction === "prev" && activeIndex > 0) {
+        controls[activeIndex - 1].focus({ preventScroll: true });
+        return true;
+      }
+
+      return false;
+    };
+
     document.addEventListener("keydown", (e) => {
       if (!STATE.slideshow.containerFocused) {
         return;
       }
 
       switch (e.key) {
-        case "ArrowRight":
-          if (focusElement.classList.contains("detail-button")) {
-            focusElement.previousElementSibling.focus();
-          } else {
-            SlideshowManager.nextSlide();
+        case "ArrowRight": {
+          const moved = moveFocusBetweenControls("next");
+          if (!moved) {
+            const activeControl = getActiveControl();
+            ArrowNavigation.showDirectionalArrow("right");
+            this.nextSlide(
+              activeControl && activeControl.classList.contains("favorite-button")
+                ? "favorite-button"
+                : "play-button"
+            );
           }
           e.preventDefault();
           break;
+        }
 
-        case "ArrowLeft":
-          if (focusElement.classList.contains("play-button")) {
-            focusElement.nextElementSibling.focus();
-          } else {
-            SlideshowManager.prevSlide();
+        case "ArrowLeft": {
+          const moved = moveFocusBetweenControls("prev");
+          if (!moved) {
+            const activeControl = getActiveControl();
+            ArrowNavigation.showDirectionalArrow("left");
+            this.prevSlide(
+              activeControl && activeControl.classList.contains("detail-button")
+                ? "detail-button"
+                : "play-button"
+            );
           }
           e.preventDefault();
           break;
+        }
 
         case " ": // Space bar
           this.togglePause();
           e.preventDefault();
           break;
 
-        case "Enter":
-          focusElement.click();
-          e.preventDefault();
+        case "Enter": {
+          const activeControl = getActiveControl();
+          if (activeControl) {
+            activeControl.click();
+            e.preventDefault();
+          }
           break;
+        }
       }
     });
 
-    const container = SlideUtils.getOrCreateSlidesContainer();
-
-    container.addEventListener("focus", () => {
+    container.addEventListener("focusin", () => {
       STATE.slideshow.containerFocused = true;
     });
 
-    container.addEventListener("blur", () => {
-      STATE.slideshow.containerFocused = false;
+    container.addEventListener("focusout", (event) => {
+      if (!container.contains(event.relatedTarget)) {
+        STATE.slideshow.containerFocused = false;
+      }
     });
   },
 
@@ -1435,6 +1540,8 @@ const SlideshowManager = {
   async loadSlideshowData() {
     try {
       STATE.slideshow.isLoading = true;
+
+      const container = SlideUtils.getOrCreateSlidesContainer();
 
       let itemIds = await ApiUtils.fetchItemIdsFromList();
 
@@ -1450,6 +1557,7 @@ const SlideshowManager = {
       this.createPaginationDots();
 
       await this.updateCurrentSlide(0);
+      this.focusControlOnSlide(container.querySelector(".slide.active"));
 
       STATE.slideshow.slideInterval = new SlideTimer(() => {
         if (!STATE.slideshow.isPaused) {
@@ -1464,102 +1572,127 @@ const SlideshowManager = {
   },
 };
 
-/**
- * Initializes arrow navigation elements
- */
-const initArrowNavigation = () => {
-  const container = SlideUtils.getOrCreateSlidesContainer();
+const ArrowNavigation = {
+  leftArrow: null,
+  rightArrow: null,
+  hideTimeout: null,
 
-  const leftArrow = SlideUtils.createElement("div", {
-    className: "arrow left-arrow",
-    innerHTML: '<i class="material-icons">chevron_left</i>',
-    tabIndex: "0",
-    onclick: (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      SlideshowManager.prevSlide();
-    },
-    style: {
-      opacity: "0",
-      transition: "opacity 0.3s ease",
-      display: "none",
-    },
-  });
+  init() {
+    const container = SlideUtils.getOrCreateSlidesContainer();
 
-  const rightArrow = SlideUtils.createElement("div", {
-    className: "arrow right-arrow",
-    innerHTML: '<i class="material-icons">chevron_right</i>',
-    tabIndex: "0",
-    onclick: (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      SlideshowManager.nextSlide();
-    },
-    style: {
-      opacity: "0",
-      transition: "opacity 0.3s ease",
-      display: "none",
-    },
-  });
+    this.leftArrow = SlideUtils.createElement("div", {
+      className: "arrow left-arrow",
+      innerHTML: '<i class="material-icons">chevron_left</i>',
+      tabIndex: "0",
+      onclick: (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        SlideshowManager.prevSlide("detail-button");
+        this.showDirectionalArrow("left");
+      },
+      style: {
+        opacity: "0",
+        transition: "opacity 0.2s ease",
+        display: "none",
+      },
+    });
 
-  const pauseButton = SlideUtils.createElement("div", {
-    className: "pause-button",
-    innerHTML: '<i class="material-icons">pause</i>',
-    tabIndex: "0",
-    "aria-label": "Pause slideshow",
-    title: "Pause slideshow",
-    onclick: (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      SlideshowManager.togglePause();
-    }
-  });
+    this.rightArrow = SlideUtils.createElement("div", {
+      className: "arrow right-arrow",
+      innerHTML: '<i class="material-icons">chevron_right</i>',
+      tabIndex: "0",
+      onclick: (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        SlideshowManager.nextSlide("favorite-button");
+        this.showDirectionalArrow("right");
+      },
+      style: {
+        opacity: "0",
+        transition: "opacity 0.2s ease",
+        display: "none",
+      },
+    });
 
-  container.appendChild(leftArrow);
-  container.appendChild(rightArrow);
-  container.appendChild(pauseButton);
+    const pauseButton = SlideUtils.createElement("div", {
+      className: "pause-button",
+      innerHTML: '<i class="material-icons">pause</i>',
+      tabIndex: "0",
+      "aria-label": "Pause slideshow",
+      title: "Pause slideshow",
+      onclick: (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        SlideshowManager.togglePause();
+      },
+    });
 
-  const showArrows = () => {
-    leftArrow.style.display = "block";
-    rightArrow.style.display = "block";
+    container.appendChild(this.leftArrow);
+    container.appendChild(this.rightArrow);
+    container.appendChild(pauseButton);
 
-    void leftArrow.offsetWidth;
-    void rightArrow.offsetWidth;
+    container.addEventListener("mouseenter", () => this.showHoverArrows());
+    container.addEventListener("mouseleave", () => this.hideArrows());
 
-    leftArrow.style.opacity = "1";
-    rightArrow.style.opacity = "1";
-  };
+    let arrowTimeout;
+    container.addEventListener(
+      "touchstart",
+      () => {
+        if (arrowTimeout) {
+          clearTimeout(arrowTimeout);
+        }
 
-  const hideArrows = () => {
-    leftArrow.style.opacity = "0";
-    rightArrow.style.opacity = "0";
+        this.showHoverArrows();
+
+        arrowTimeout = setTimeout(() => this.hideArrows(), 2000);
+      },
+      { passive: true }
+    );
+  },
+
+  showHoverArrows() {
+    if (!this.leftArrow || !this.rightArrow) return;
+
+    this.leftArrow.style.display = "block";
+    this.rightArrow.style.display = "block";
+
+    requestAnimationFrame(() => {
+      this.leftArrow.style.opacity = "1";
+      this.rightArrow.style.opacity = "1";
+    });
+  },
+
+  showDirectionalArrow(direction) {
+    if (!this.leftArrow || !this.rightArrow) return;
+
+    clearTimeout(this.hideTimeout);
+
+    this.leftArrow.style.display = direction === "left" ? "block" : "none";
+    this.rightArrow.style.display = direction === "right" ? "block" : "none";
+
+    requestAnimationFrame(() => {
+      this.leftArrow.style.opacity = direction === "left" ? "1" : "0";
+      this.rightArrow.style.opacity = direction === "right" ? "1" : "0";
+    });
+
+    this.hideTimeout = setTimeout(() => this.hideArrows(), 900);
+  },
+
+  hideArrows() {
+    if (!this.leftArrow || !this.rightArrow) return;
+
+    this.leftArrow.style.opacity = "0";
+    this.rightArrow.style.opacity = "0";
 
     setTimeout(() => {
-      if (leftArrow.style.opacity === "0") {
-        leftArrow.style.display = "none";
-        rightArrow.style.display = "none";
+      if (this.leftArrow.style.opacity === "0") {
+        this.leftArrow.style.display = "none";
       }
-    }, 300);
-  };
-
-  container.addEventListener("mouseenter", showArrows);
-
-  container.addEventListener("mouseleave", hideArrows);
-
-  let arrowTimeout;
-  container.addEventListener(
-    "touchstart",
-    () => {
-      if (arrowTimeout) {
-        clearTimeout(arrowTimeout);
+      if (this.rightArrow.style.opacity === "0") {
+        this.rightArrow.style.display = "none";
       }
-
-      showArrows();
-
-      arrowTimeout = setTimeout(hideArrows, 2000);
-    },
-    { passive: true }
-  );
+    }, 200);
+  },
 };
 
 /**
@@ -1655,7 +1788,7 @@ const slidesInit = async () => {
 
     SlideshowManager.initKeyboardEvents();
 
-    initArrowNavigation();
+    ArrowNavigation.init();
 
     VisibilityObserver.init();
 
