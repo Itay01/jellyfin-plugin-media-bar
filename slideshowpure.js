@@ -1223,6 +1223,11 @@ const SlideshowManager = {
 
       currentSlide.classList.add("active");
 
+      const selectionClass =
+        focusControlClass || STATE.slideshow.lastFocusedControl;
+
+      this.applySelectionState(currentSlide, selectionClass);
+
       if (CONFIG.slideAnimationEnabled) {
         currentSlide.querySelector(".backdrop").classList.add("animate");
         currentSlide.querySelector(".logo").classList.add("animate");
@@ -1249,18 +1254,18 @@ const SlideshowManager = {
       this.preloadAdjacentSlides(index);
       this.updateDots();
 
-      const desiredFocusClass =
+      const focusTargetClass =
         focusControlClass ||
         (STATE.slideshow.containerFocused
           ? STATE.slideshow.lastFocusedControl
           : null);
 
       if (
-        desiredFocusClass ||
+        focusTargetClass ||
         (STATE.slideshow.containerFocused &&
           !currentSlide.contains(document.activeElement))
       ) {
-        this.focusControlOnSlide(currentSlide, desiredFocusClass);
+        this.focusControlOnSlide(currentSlide, focusTargetClass);
       }
 
       if (STATE.slideshow.slideInterval && !STATE.slideshow.isPaused) {
