@@ -872,11 +872,16 @@ const SlideCreator = {
     const detailButton = this.createDetailButton(itemId);
     const favoriteButton = this.createFavoriteButton(item);
 
+    const syncControlSelection = (className) => {
+      SlideshowManager.applySelectionState(slide, className);
+    };
+
     const registerControlFocus = (button, className) => {
       if (!button) return;
       button.addEventListener("focus", () => {
         STATE.slideshow.lastFocusedControl = className;
         STATE.slideshow.containerFocused = true;
+        syncControlSelection(className);
       });
     };
 
@@ -884,6 +889,8 @@ const SlideCreator = {
     registerControlFocus(detailButton, "detail-button");
     registerControlFocus(favoriteButton, "favorite-button");
     buttonContainer.append(detailButton, playButton, favoriteButton);
+
+    syncControlSelection(STATE.slideshow.lastFocusedControl);
 
     slide.append(
       logoContainer,
@@ -1158,6 +1165,21 @@ const SlideshowManager = {
     });
   },
 
+  applySelectionState(slide, controlClass = STATE.slideshow.lastFocusedControl) {
+    if (!slide) return;
+
+    const controls = slide.querySelectorAll(
+      ".button-container .detail-button, .button-container .play-button, .button-container .favorite-button"
+    );
+
+    controls.forEach((control) => {
+      control.classList.toggle(
+        "control-selected",
+        controlClass && control.classList.contains(controlClass)
+      );
+    });
+  },
+
   /**
    * Updates current slide to the specified index
    * @param {number} index - Slide index to display
@@ -1278,6 +1300,7 @@ const SlideshowManager = {
     const target = fallbackOrder[0];
 
     if (target) {
+      this.applySelectionState(slide, controlClass);
       requestAnimationFrame(() => {
         target.focus({ preventScroll: true });
       });
