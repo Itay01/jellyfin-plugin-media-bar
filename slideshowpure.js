@@ -1300,6 +1300,10 @@ const SlideshowManager = {
 
     const nextIndex = (currentIndex + 1) % totalItems;
 
+    if (STATE.slideshow.containerFocused && STATE.slideshow.flashArrow) {
+      STATE.slideshow.flashArrow("right");
+    }
+
     this.updateCurrentSlide(nextIndex);
   },
 
@@ -1308,6 +1312,10 @@ const SlideshowManager = {
     const totalItems = STATE.slideshow.totalItems;
 
     const prevIndex = (currentIndex - 1 + totalItems) % totalItems;
+
+    if (STATE.slideshow.containerFocused && STATE.slideshow.flashArrow) {
+      STATE.slideshow.flashArrow("left");
+    }
 
     this.updateCurrentSlide(prevIndex);
   },
@@ -1597,6 +1605,8 @@ const initArrowNavigation = () => {
   container.appendChild(rightArrow);
   container.appendChild(pauseButton);
 
+  let arrowTimeout;
+
   const showArrows = () => {
     leftArrow.style.display = "block";
     rightArrow.style.display = "block";
@@ -1624,7 +1634,38 @@ const initArrowNavigation = () => {
 
   container.addEventListener("mouseleave", hideArrows);
 
-  let arrowTimeout;
+  const showDirectionalArrow = (direction) => {
+    const target = direction === "left" ? leftArrow : rightArrow;
+    const other = direction === "left" ? rightArrow : leftArrow;
+
+    if (!target) return;
+
+    target.style.display = "block";
+    if (!container.matches(":hover") && other) {
+      other.style.opacity = "0";
+      setTimeout(() => {
+        if (!container.matches(":hover") && other.style.opacity === "0") {
+          other.style.display = "none";
+        }
+      }, 300);
+    }
+
+    void target.offsetWidth;
+    target.style.opacity = "1";
+
+    if (arrowTimeout) {
+      clearTimeout(arrowTimeout);
+    }
+
+    arrowTimeout = setTimeout(() => {
+      if (!container.matches(":hover")) {
+        hideArrows();
+      }
+    }, 1200);
+  };
+
+  STATE.slideshow.flashArrow = showDirectionalArrow;
+
   container.addEventListener(
     "touchstart",
     () => {
