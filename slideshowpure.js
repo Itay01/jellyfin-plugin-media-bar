@@ -41,6 +41,7 @@ const STATE = {
     currentSlideIndex: 0,
     focusedSlide: null,
     containerFocused: false,
+    lastFocusedControl: "play",
     slideInterval: null,
     itemIds: [],
     loadedItems: {},
@@ -253,6 +254,7 @@ const resetSlideshowState = () => {
   STATE.slideshow.currentSlideIndex = 0;
   STATE.slideshow.focusedSlide = null;
   STATE.slideshow.containerFocused = false;
+  STATE.slideshow.lastFocusedControl = "play";
   STATE.slideshow.slideInterval = null;
   STATE.slideshow.itemIds = [];
   STATE.slideshow.loadedItems = {};
@@ -971,7 +973,7 @@ const SlideCreator = {
    * @returns {HTMLElement} Play button element
    */
   createPlayButton(itemId) {
-    return SlideUtils.createElement("button", {
+    const button = SlideUtils.createElement("button", {
       className: "detailButton btnPlay play-button",
       innerHTML: `
       <span class="play-text">Play</span>
@@ -983,6 +985,13 @@ const SlideCreator = {
         ApiUtils.playItem(itemId);
       },
     });
+
+    button.addEventListener("focus", () => {
+      STATE.slideshow.lastFocusedControl = "play";
+      STATE.slideshow.containerFocused = true;
+    });
+
+    return button;
   },
 
   /**
@@ -991,7 +1000,7 @@ const SlideCreator = {
    * @returns {HTMLElement} Detail button element
    */
   createDetailButton(itemId) {
-    return SlideUtils.createElement("button", {
+    const button = SlideUtils.createElement("button", {
       className: "detailButton detail-button",
       tabIndex: "0",
       onclick: (e) => {
@@ -1006,6 +1015,13 @@ const SlideCreator = {
         }
       },
     });
+
+    button.addEventListener("focus", () => {
+      STATE.slideshow.lastFocusedControl = "detail";
+      STATE.slideshow.containerFocused = true;
+    });
+
+    return button;
   },
 
   /**
@@ -1025,6 +1041,11 @@ const SlideCreator = {
         e.stopPropagation();
         await ApiUtils.toggleFavorite(item.Id, button);
       },
+    });
+
+    button.addEventListener("focus", () => {
+      STATE.slideshow.lastFocusedControl = "favorite";
+      STATE.slideshow.containerFocused = true;
     });
 
     return button;
@@ -1179,6 +1200,8 @@ const SlideshowManager = {
       }
 
       currentSlide.classList.add("active");
+
+      this.applySavedControlFocus(currentSlide);
 
       if (CONFIG.slideAnimationEnabled) {
         currentSlide.querySelector(".backdrop").classList.add("animate");
@@ -1378,30 +1401,87 @@ const SlideshowManager = {
     }
   },
 
+  getControlSelector(controlType) {
+    switch (controlType) {
+      case "detail":
+        return ".detail-button";
+      case "favorite":
+        return ".favorite-button";
+      default:
+        return ".play-button";
+    }
+  },
+
+  focusControl(controlType) {
+    const currentSlide = document.querySelector(".slide.active");
+    if (!currentSlide) {
+      return;
+    }
+
+    const target = currentSlide.querySelector(
+      this.getControlSelector(controlType)
+    );
+
+    if (target) {
+      STATE.slideshow.lastFocusedControl = controlType;
+      target.focus({ preventScroll: true });
+    }
+  },
+
+  applySavedControlFocus(slide) {
+    const currentSlide = slide || document.querySelector(".slide.active");
+    if (!currentSlide) {
+      return;
+    }
+
+    const target = currentSlide.querySelector(
+      this.getControlSelector(STATE.slideshow.lastFocusedControl || "play")
+    );
+
+    if (target) {
+      target.focus({ preventScroll: true });
+    }
+  },
+
   /**
    * Initializes keyboard event listeners
    */
   initKeyboardEvents() {
+    const container = SlideUtils.getOrCreateSlidesContainer();
+
     document.addEventListener("keydown", (e) => {
-      if (!STATE.slideshow.containerFocused) {
+      const focusElement = document.activeElement;
+
+      if (!focusElement || !container.contains(focusElement)) {
+        STATE.slideshow.containerFocused = false;
         return;
       }
+
+      STATE.slideshow.containerFocused = true;
 
       switch (e.key) {
         case "ArrowRight":
           if (focusElement.classList.contains("detail-button")) {
-            focusElement.previousElementSibling.focus();
+            this.focusControl("play");
+          } else if (focusElement.classList.contains("play-button")) {
+            this.focusControl("favorite");
+          } else if (focusElement.classList.contains("favorite-button")) {
+            this.nextSlide();
           } else {
-            SlideshowManager.nextSlide();
+            return;
           }
           e.preventDefault();
           break;
 
         case "ArrowLeft":
-          if (focusElement.classList.contains("play-button")) {
-            focusElement.nextElementSibling.focus();
+          if (focusElement.classList.contains("favorite-button")) {
+            this.focusControl("play");
+          } else if (focusElement.classList.contains("play-button")) {
+            this.focusControl("detail");
+          } else if (focusElement.classList.contains("detail-button")) {
+            this.prevSlide();
           } else {
-            SlideshowManager.prevSlide();
+            return;
           }
           e.preventDefault();
           break;
@@ -1417,8 +1497,6 @@ const SlideshowManager = {
           break;
       }
     });
-
-    const container = SlideUtils.getOrCreateSlidesContainer();
 
     container.addEventListener("focus", () => {
       STATE.slideshow.containerFocused = true;
