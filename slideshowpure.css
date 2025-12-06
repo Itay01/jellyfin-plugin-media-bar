@@ -442,15 +442,15 @@
   gap: 6px;
   -webkit-tap-highlight-color: #fff0;
   border-radius: 8px;
-  background: linear-gradient(135deg, rgba(0, 198, 255, 0.9), rgba(0, 82, 212, 0.95));
-  color: #fff;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  background: linear-gradient(135deg, #d8d8d8, #c2c2c2);
+  color: #111;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
   will-change: transform, box-shadow;
 }
 
 .detail-button {
   font-size: 18px;
-  color: rgb(0, 0, 0);
+  color: #1c1c1c;
   border-radius: 50%;
   height: 50px;
   width: 50px;
@@ -459,7 +459,7 @@
   transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease,
     color 0.18s ease, opacity 0.18s ease;
   -webkit-tap-highlight-color: #fff0;
-  background: rgba(255, 255, 255, 0.9);
+  background: linear-gradient(135deg, #d8d8d8, #c2c2c2);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
   will-change: transform, box-shadow;
 }
@@ -475,7 +475,7 @@
   transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease,
     color 0.18s ease, opacity 0.18s ease;
   -webkit-tap-highlight-color: #fff0;
-  background: rgba(255, 255, 255, 0.9);
+  background: linear-gradient(135deg, #d8d8d8, #c2c2c2);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
   will-change: transform, box-shadow;
 }
@@ -536,20 +536,19 @@
   transform: translateY(-1px) scale(1.05);
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.32),
     0 14px 30px rgba(0, 0, 0, 0.48);
+  background: linear-gradient(135deg, #f3f3f3, #cfcfcf);
 }
 
 .detail-button:focus,
 .detail-button:focus-visible,
 .detail-button:hover {
-  background: linear-gradient(135deg, #fff1d6, #ffbe55);
-  color: #3a2a00;
+  color: #0d0d0d;
 }
 
 .favorite-button:focus,
 .favorite-button:focus-visible,
 .favorite-button:hover {
-  background: linear-gradient(135deg, #ffe0e0, #ff9aa6);
-  color: #c62828;
+  color: #b71c1c;
 }
 
 .info-container {

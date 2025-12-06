@@ -1451,6 +1451,13 @@ const SlideshowManager = {
     const container = SlideUtils.getOrCreateSlidesContainer();
     container.setAttribute("tabindex", "-1");
 
+    const applyStoredFocus = () => {
+      const activeSlide = container.querySelector(".slide.active");
+      if (activeSlide) {
+        this.focusControlOnSlide(activeSlide, STATE.slideshow.lastFocusedControl);
+      }
+    };
+
     const getFocusableControls = () => {
       const activeSlide = container.querySelector(".slide.active");
       if (!activeSlide) return [];
@@ -1509,6 +1516,16 @@ const SlideshowManager = {
 
       return false;
     };
+
+    container.addEventListener("pointerdown", () => {
+      STATE.slideshow.containerFocused = true;
+      applyStoredFocus();
+    });
+
+    container.addEventListener("focus", () => {
+      STATE.slideshow.containerFocused = true;
+      applyStoredFocus();
+    });
 
     document.addEventListener("keydown", (e) => {
       if (!STATE.slideshow.containerFocused) {
