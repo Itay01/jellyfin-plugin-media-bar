@@ -520,9 +520,10 @@
 .play-button:focus-visible {
   opacity: 1;
   transform: translateY(-1px) scale(1.03);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25),
-    0 14px 32px rgba(0, 0, 0, 0.5);
-  background: linear-gradient(135deg, #33cfff, #0a6dff);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.28),
+    0 14px 34px rgba(0, 0, 0, 0.55);
+  background: linear-gradient(135deg, #2fb4ff, #0b63ff);
+  color: #fff;
 }
 
 .detail-button:hover,
@@ -533,8 +534,22 @@
 .favorite-button:focus-visible {
   opacity: 1;
   transform: translateY(-1px) scale(1.05);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3),
-    0 14px 30px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.32),
+    0 14px 30px rgba(0, 0, 0, 0.48);
+}
+
+.detail-button:focus,
+.detail-button:focus-visible,
+.detail-button:hover {
+  background: linear-gradient(135deg, #fff1d6, #ffbe55);
+  color: #3a2a00;
+}
+
+.favorite-button:focus,
+.favorite-button:focus-visible,
+.favorite-button:hover {
+  background: linear-gradient(135deg, #ffe0e0, #ff9aa6);
+  color: #c62828;
 }
 
 .info-container {

@@ -41,6 +41,7 @@ const STATE = {
     currentSlideIndex: 0,
     focusedSlide: null,
     containerFocused: false,
+    lastFocusedControl: "play-button",
     slideInterval: null,
     itemIds: [],
     loadedItems: {},
@@ -253,6 +254,7 @@ const resetSlideshowState = () => {
   STATE.slideshow.currentSlideIndex = 0;
   STATE.slideshow.focusedSlide = null;
   STATE.slideshow.containerFocused = false;
+  STATE.slideshow.lastFocusedControl = "play-button";
   STATE.slideshow.slideInterval = null;
   STATE.slideshow.itemIds = [];
   STATE.slideshow.loadedItems = {};
@@ -869,6 +871,18 @@ const SlideCreator = {
     const playButton = this.createPlayButton(itemId);
     const detailButton = this.createDetailButton(itemId);
     const favoriteButton = this.createFavoriteButton(item);
+
+    const registerControlFocus = (button, className) => {
+      if (!button) return;
+      button.addEventListener("focus", () => {
+        STATE.slideshow.lastFocusedControl = className;
+        STATE.slideshow.containerFocused = true;
+      });
+    };
+
+    registerControlFocus(playButton, "play-button");
+    registerControlFocus(detailButton, "detail-button");
+    registerControlFocus(favoriteButton, "favorite-button");
     buttonContainer.append(detailButton, playButton, favoriteButton);
 
     slide.append(
@@ -1213,12 +1227,18 @@ const SlideshowManager = {
       this.preloadAdjacentSlides(index);
       this.updateDots();
 
-      if (
+      const desiredFocusClass =
         focusControlClass ||
+        (STATE.slideshow.containerFocused
+          ? STATE.slideshow.lastFocusedControl
+          : null);
+
+      if (
+        desiredFocusClass ||
         (STATE.slideshow.containerFocused &&
           !currentSlide.contains(document.activeElement))
       ) {
-        this.focusControlOnSlide(currentSlide, focusControlClass);
+        this.focusControlOnSlide(currentSlide, desiredFocusClass);
       }
 
       if (STATE.slideshow.slideInterval && !STATE.slideshow.isPaused) {
@@ -1242,7 +1262,7 @@ const SlideshowManager = {
     }
   },
 
-  focusControlOnSlide(slide, controlClass = "play-button") {
+  focusControlOnSlide(slide, controlClass = STATE.slideshow.lastFocusedControl) {
     if (!slide) return;
 
     const preferred = controlClass
@@ -1261,6 +1281,14 @@ const SlideshowManager = {
       requestAnimationFrame(() => {
         target.focus({ preventScroll: true });
       });
+      const matchedClass = [
+        "play-button",
+        "detail-button",
+        "favorite-button",
+      ].find((cls) => target.classList.contains(cls));
+      if (matchedClass) {
+        STATE.slideshow.lastFocusedControl = matchedClass;
+      }
       STATE.slideshow.containerFocused = true;
     }
   },
@@ -1440,7 +1468,12 @@ const SlideshowManager = {
       }
 
       const controls = getFocusableControls();
-      return controls.find((control) => control.classList.contains("play-button")) || controls[0];
+      const preferred = controls.find((control) =>
+        control.classList.contains(STATE.slideshow.lastFocusedControl)
+      );
+      return preferred ||
+        controls.find((control) => control.classList.contains("play-button")) ||
+        controls[0];
     };
 
     const moveFocusBetweenControls = (direction) => {
@@ -1450,10 +1483,16 @@ const SlideshowManager = {
       let activeIndex = controls.indexOf(document.activeElement);
 
       if (activeIndex === -1) {
-        const defaultIndex = Math.max(
-          controls.findIndex((control) => control.classList.contains("play-button")),
-          0
+        const preferredIndex = controls.findIndex((control) =>
+          control.classList.contains(STATE.slideshow.lastFocusedControl)
         );
+        const defaultIndex =
+          preferredIndex !== -1
+            ? preferredIndex
+            : Math.max(
+                controls.findIndex((control) => control.classList.contains("play-button")),
+                0
+              );
         controls[defaultIndex].focus({ preventScroll: true });
         return true;
       }
@@ -1523,8 +1562,14 @@ const SlideshowManager = {
       }
     });
 
-    container.addEventListener("focusin", () => {
+    container.addEventListener("focusin", (event) => {
       STATE.slideshow.containerFocused = true;
+      const activeSlide = container.querySelector(".slide.active");
+      const isControlTarget = event.target.closest(".button-container");
+
+      if (activeSlide && !isControlTarget) {
+        this.focusControlOnSlide(activeSlide, STATE.slideshow.lastFocusedControl);
+      }
     });
 
     container.addEventListener("focusout", (event) => {
