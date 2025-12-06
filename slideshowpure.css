@@ -429,6 +429,8 @@
   flex-direction: row;
   align-items: center;
   justify-content: center;
+  position: relative;
+  isolation: isolate;
   padding: 8px 16px;
   border: solid 0px rgba(255, 255, 255, 0);
   font-family: "Archivo Narrow", sans-serif;
@@ -456,6 +458,8 @@
   border-radius: 50%;
   height: 50px;
   width: 50px;
+  position: relative;
+  isolation: isolate;
   border: none;
   cursor: pointer;
   transition:
@@ -478,6 +482,8 @@
   border-radius: 50%;
   height: 50px;
   width: 50px;
+  position: relative;
+  isolation: isolate;
   border: none;
   cursor: pointer;
   transition:
@@ -529,6 +535,22 @@
   vertical-align: middle;
 }
 
+.play-button::after,
+.detail-button::after,
+.favorite-button::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0));
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  transform: scale(0.94);
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.45));
+  z-index: -1;
+  pointer-events: none;
+}
+
 .play-button:hover,
 .play-button:focus,
 .play-button:focus-visible,
@@ -549,8 +571,22 @@
 .play-button:hover,
 .play-button:focus,
 .play-button:focus-visible {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(215, 228, 255, 0.7));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(210, 225, 255, 0.85));
   color: #000;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.75);
+}
+
+.play-button:hover::after,
+.play-button:focus::after,
+.play-button:focus-visible::after,
+.detail-button:hover::after,
+.detail-button:focus::after,
+.detail-button:focus-visible::after,
+.favorite-button:hover::after,
+.favorite-button:focus::after,
+.favorite-button:focus-visible::after {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .detail-button:hover,
@@ -559,7 +595,10 @@
 .favorite-button:hover,
 .favorite-button:focus,
 .favorite-button:focus-visible {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.18));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.22));
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.45),
+    0 18px 36px rgba(0, 0, 0, 0.55);
 }
 
 #slides-container:focus-visible {

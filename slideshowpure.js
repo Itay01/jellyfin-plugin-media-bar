@@ -260,6 +260,7 @@ const resetSlideshowState = () => {
   STATE.slideshow.createdSlides = {};
   STATE.slideshow.totalItems = 0;
   STATE.slideshow.isLoading = false;
+  STATE.slideshow.focusedControl = "play";
 };
 
 /**
@@ -1512,6 +1513,8 @@ const SlideshowManager = {
     try {
       STATE.slideshow.isLoading = true;
 
+      STATE.slideshow.focusedControl = "play";
+
       let itemIds = await ApiUtils.fetchItemIdsFromList();
 
       if (itemIds.length === 0) {
@@ -1527,7 +1530,9 @@ const SlideshowManager = {
 
       await this.updateCurrentSlide(0);
 
-      this.focusControl(STATE.slideshow.focusedControl || "play");
+      const container = SlideUtils.getOrCreateSlidesContainer();
+      container.focus({ preventScroll: true });
+      this.focusControl("play");
 
       STATE.slideshow.slideInterval = new SlideTimer(() => {
         if (!STATE.slideshow.isPaused) {
