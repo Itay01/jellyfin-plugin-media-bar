@@ -506,6 +506,12 @@
   opacity: 0.8;
 }
 
+.play-button:focus-visible,
+.detail-button:focus-visible,
+.favorite-button:focus-visible {
+  opacity: 0.8;
+}
+
 .info-container {
   position: absolute;
   top: calc(50% + 0vh);
